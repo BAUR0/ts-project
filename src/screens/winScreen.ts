@@ -164,27 +164,21 @@ class WinScreen {
                         minStart: 240
                     }
                 },
-                // {
-                //     type: 'animatedSingle',
-                //     config: {
-                //         anim: {
-                //             framerate: 25,
-                //             loop: true,
-                //             textures: [
-                //                 PIXI.Texture.from('coin-anim-01.png'),
-                //                 PIXI.Texture.from('coin-anim-02.png'),
-                //                 PIXI.Texture.from('coin-anim-03.png'),
-                //                 PIXI.Texture.from('coin-anim-04.png'),
-                //                 PIXI.Texture.from('coin-anim-05.png'),
-                //                 PIXI.Texture.from('coin-anim-06.png')
-                //             ]
-                //         }
-                //     }
-                // },
                 {
-                    type: 'textureSingle',
+                    type: 'animatedSingle',
                     config: {
-                        texture: PIXI.Texture.from('coin-anim-01.png')
+                        anim: {
+                            framerate: 25,
+                            loop: true,
+                            textures: [
+                                { texture: PIXI.Texture.from('coin-anim-01.png') },
+                                { texture: PIXI.Texture.from('coin-anim-02.png') },
+                                { texture: PIXI.Texture.from('coin-anim-03.png') },
+                                { texture: PIXI.Texture.from('coin-anim-04.png') },
+                                { texture: PIXI.Texture.from('coin-anim-05.png') },
+                                { texture: PIXI.Texture.from('coin-anim-06.png') }
+                            ]
+                        }
                     }
                 },
                 {
