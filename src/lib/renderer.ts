@@ -7,16 +7,15 @@ import * as PIXI from "pixi.js";
  */
 class Renderer {
 
-	private _gameContainer?: PIXI.Container;
-	private _wheelContainer?: PIXI.Container;
-	private _uiContainer?: PIXI.Container;
-	private _debugContainer?: PIXI.Container;
-	private _pixi?: PIXI.Application;
-	private _pixiRenderer?: PIXI.IRenderer;
+	private _pixi: PIXI.Application;
+	private _pixiRenderer: PIXI.IRenderer;
+	private _gameContainer: PIXI.Container;
 
 	constructor() {
-        this._createRenderer();
-        this._createGameLayers();
+        this._pixi = this._createRenderer();
+        this._pixiRenderer = this._pixi.renderer;
+
+        this._gameContainer = this._createGameLayer();
         this._createTicker();
         this._createResize();
         // this._enablePixiInspector();
@@ -33,44 +32,15 @@ class Renderer {
 	}
 
 	/**
-	 * The container for the wheel
-	 *
-	 * @readonly
-	 * @member {PIXI.Container}
-	 */
-	get wheelContainer() {
-		return this._wheelContainer;
-	}
-
-	/**
-	 * The container for the ui
-	 *
-	 * @readonly
-	 * @member {PIXI.Container}
-	 */
-	get uiContainer() {
-		return this._uiContainer;
-	}
-
-	/**
-	 * The container for the debug
-	 *
-	 * @readonly
-	 * @member {PIXI.Container}
-	 */
-	get debugContainer() {
-		return this._debugContainer;
-	}
-
-	/**
 	 * Create the renderer
 	 *
 	 * @private
+	 * @returns {PIXI.Application}
 	 */
     _createRenderer() {
         PIXI.settings.PREFER_ENV = PIXI.ENV.WEBGL2;
 
-        this._pixi = new PIXI.Application({
+        return new PIXI.Application({
             antialias: false,
             autoStart: false,
             clearBeforeRender: false,
@@ -79,41 +49,23 @@ class Renderer {
 			view: document.getElementById('game-canvas') as HTMLCanvasElement,
             width: 1920
         });
-        this._pixiRenderer = this._pixi.renderer;
-
-        this._resize();
-
-		// const viewport = document.getElementById('viewport')!;
-        // viewport.appendChild(this._pixi.view);
     }
 
 	/**
-	 * Create the game layers
+	 * Create the game layer
 	 *
 	 * @private
+	 * @returns {PIXI.Container}
 	 */
-    _createGameLayers() {
-		this._gameContainer = new PIXI.Container();
-		this._gameContainer.name = 'gameContainer';
-		this._gameContainer.sortableChildren = true;
-		this._gameContainer.pivot.set(-960, -540); // make 0,0 the center of the game
-        this._pixi!.stage.addChild(this._gameContainer);
+	_createGameLayer() {
+		const gameContainer = new PIXI.Container();
+		gameContainer.name = 'gameContainer';
+		gameContainer.sortableChildren = true;
+		gameContainer.pivot.set(-960, -540); // make 0,0 the center of the game
+        this._pixi.stage.addChild(gameContainer);
 
-		this._wheelContainer = new PIXI.Container();
-		this._wheelContainer.name = 'wheelContainer';
-		this._wheelContainer.zIndex = 100;
-		this._gameContainer.addChild(this._wheelContainer);
-
-		this._uiContainer = new PIXI.Container();
-		this._uiContainer.name = 'uiContainer';
-		this._uiContainer.zIndex = 200;
-		this._gameContainer.addChild(this._uiContainer);
-
-		this._debugContainer = new PIXI.Container();
-		this._debugContainer.name = 'debugContainer';
-		this._debugContainer.zIndex = 300;
-		this._gameContainer.addChild(this._debugContainer);
-    }
+		return gameContainer;
+	}
 
 	/**
 	 * Create the ticker
@@ -121,9 +73,9 @@ class Renderer {
 	 * @private
 	 */
     _createTicker() {
-		this._pixi!.ticker.maxFPS = 60;
-		this._pixi!.ticker.add(this._onRenderTick, this);
-        this._pixi!.ticker.start();
+		this._pixi.ticker.maxFPS = 60;
+		this._pixi.ticker.add(this._onRenderTick, this);
+        this._pixi.ticker.start();
     }
 
 	/**
@@ -132,7 +84,7 @@ class Renderer {
 	 * @private
 	 */
 	_onRenderTick() {
-		this._pixiRenderer!.render(this._pixi!.stage);
+		this._pixiRenderer.render(this._pixi.stage);
 	}
 
 	/**
@@ -166,8 +118,8 @@ class Renderer {
 			h = innerHeight;
 		}
 
-		this._pixiRenderer!.view!.style!.width = `${w}px`;
-		this._pixiRenderer!.view!.style!.height = `${h}px`;
+		this._pixiRenderer.view.style!.width = `${w}px`;
+		this._pixiRenderer.view.style!.height = `${h}px`;
 	}
 
     /**

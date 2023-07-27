@@ -1,3 +1,5 @@
+import * as PIXI from "pixi.js";
+
 import Loader from "./lib/loader";
 import Renderer from "./lib/renderer";
 import SoundPlayer from "./lib/soundPlayer";
@@ -19,11 +21,11 @@ class Game {
 
 	private readonly _loader: Loader;
 	private readonly _renderer: Renderer;
-	private _bg?: Background;
+	private _background?: Background;
 	private _bonusScreen?: BonusScreen;
 	private _winScreen?: WinScreen;
 	private _titleScreen?: TitleScreen;
-	private _ui?: UserInterface;
+	private _userInterface?: UserInterface;
 	private _debugScreen?: DebugScreen;
 
 	constructor() {
@@ -48,29 +50,48 @@ class Game {
 	 * @private
 	 */
 	_create() {
-        this._bg = new Background({
-            layer: this._renderer.gameContainer!
+		const wheelContainer = new PIXI.Container();
+		wheelContainer.name = 'wheelContainer';
+		wheelContainer.zIndex = 100;
+		this._renderer.gameContainer.addChild(wheelContainer);
+
+		const uiContainer = new PIXI.Container();
+		uiContainer.name = 'uiContainer';
+		uiContainer.zIndex = 200;
+		this._renderer.gameContainer.addChild(uiContainer);
+
+		const debugContainer = new PIXI.Container();
+		debugContainer.name = 'debugContainer';
+		debugContainer.zIndex = 300;
+		this._renderer.gameContainer.addChild(debugContainer);
+
+        this._background = new Background({
+            layer: this._renderer.gameContainer
         });
 
 		this._bonusScreen = new BonusScreen({
-            layer: this._renderer.wheelContainer!,
+			name: 'bonusScreen',
+            layer: wheelContainer,
 			onWin: async (win: number) => await this._onWin(win)
 		});
 
 		this._winScreen = new WinScreen({
-            layer: this._renderer.wheelContainer!,
+			name: 'winScreen',
+            layer: wheelContainer,
 		});
 
 		this._titleScreen = new TitleScreen({
-            layer: this._renderer.wheelContainer!
+			name: 'titleScreen',
+            layer: wheelContainer
 		});
 
-        this._ui = new UserInterface({
-            layer: this._renderer.uiContainer!
+        this._userInterface = new UserInterface({
+            layer: uiContainer
         });
 
         this._debugScreen = new DebugScreen({
-            layer: this._renderer.debugContainer!,
+			name: 'debugScreen',
+            layer: debugContainer,
 			onDebug: (weight: number) => this._bonusScreen!.forceWeight = weight
         });
     }
@@ -96,7 +117,7 @@ class Game {
 	 */
 	async _onWin(win: number) {
 		await Promise.all([
-			this._ui!.win(win),
+			this._userInterface!.win(win),
 			this._winScreen!.start(win)
 		]);
 	}

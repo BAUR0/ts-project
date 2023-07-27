@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import Tween from "../lib/tween";
 import { soundPlayer } from "../game";
+import Screen, { ScreenInitData } from "./screen";
 
 /**
  * @typedef {object} BonusScreen_ResultData
@@ -8,8 +9,7 @@ import { soundPlayer } from "../game";
  * @property {number} credits - The number of credits won
  */
 
-interface BonusScreenInitData {
-    layer: PIXI.Container,
+interface BonusScreenInitData extends ScreenInitData {
     onWin: Function
 }
 
@@ -29,27 +29,25 @@ interface BonusResult {
  * Bonus Screen
  *
  * @class BonusScreen
+ * @extends Screen
  */
-class BonusScreen {
+class BonusScreen extends Screen {
 
-    private readonly _layer: PIXI.Container;
     private readonly _onWin: Function;
     private readonly _wheelData: WheelData[];
     private _forceWeight: number;
     private _resolver?: Function;
-    private _bonusScreen?: PIXI.Container;
-    private _bonusText?: PIXI.Text;
-    private _fadeInTween?: Tween;
-    private _fadeOutTween?: Tween;
-    private _wheelContainer?: PIXI.Container;
-    private _wheelCenter?: PIXI.Sprite;
-    private _wheelPin?: PIXI.Sprite;
+    private _bonusText: PIXI.Text;
+    private _wheelContainer: PIXI.Container;
+    private _wheelCenter: PIXI.Sprite;
 
 	constructor(initData: BonusScreenInitData) {
-        const { layer, onWin } = initData;
+        super(initData);
 
-        this._layer = layer;
+        const { onWin } = initData;
+
         this._onWin = onWin;
+        this._resolver = undefined;
         this._wheelData = [
             { credits: 5000, weight: 4, angle: 0, tint: "#ff0000" },
             { credits: 200, weight: 100, angle: 45, tint: "#00ff00" },
@@ -62,7 +60,12 @@ class BonusScreen {
         ];
         this._forceWeight = -1;
 
-        this._create();
+        this._wheelContainer = this._createWheelContainer();
+        this._wheelCenter = this._createWheelCenter();
+        this._bonusText = this._createText();
+        this._createWheelPin();
+
+        this._disable();
     }
     
     /**
@@ -87,29 +90,23 @@ class BonusScreen {
 
             console.log(`Bonus Screen Started`);
             
-            this._bonusText!.visible = true;
-            this._wheelContainer!.angle = 0;
-            this._bonusScreen!.alpha = 0;
-            this._bonusScreen!.visible = true;
-            await this._fadeInTween!.start();
+            this._bonusText.visible = true;
+            this._wheelContainer.angle = 0;
+            this.screenContainer.alpha = 0;
+            this.screenContainer.visible = true;
+            await this._fadeInTween.start();
 
             this._enable();
         });
     }
 
 	/**
-	 * Create the bonus screen
+	 * Create the bonus screen text
 	 *
 	 * @private
+	 * @returns {PIXI.Text}
 	 */
-    _create() {
-		this._bonusScreen = new PIXI.Container();
-		this._bonusScreen.name = 'bonusScreen';
-        this._bonusScreen.visible = false;
-		this._layer.addChild(this._bonusScreen);
-
-        this._createWheel();
-
+    _createText() {
         const style = new PIXI.TextStyle({
             align: "center",
 			fontFamily: 'Arial',
@@ -120,27 +117,25 @@ class BonusScreen {
             strokeThickness: 3
 		});
 
-        this._bonusText = new PIXI.Text(`PRESS\nTO SPIN`, style);
-		this._bonusText.name = 'bonusText';
-        this._bonusText.width = 150;
-		this._bonusText.position = { x: -75, y: -40 };
-		this._bonusScreen.addChild(this._bonusText);
+        const bonusText = new PIXI.Text(`PRESS\nTO SPIN`, style);
+		bonusText.name = 'bonusText';
+        bonusText.width = 150;
+		bonusText.position = { x: -75, y: -40 };
+		this.screenContainer.addChild(bonusText);
 
-        this._fadeInTween = new Tween(this._bonusScreen, { alpha: 0 }, { alpha: 1 });
-        this._fadeOutTween = new Tween(this._bonusScreen, { alpha: 1 }, { alpha: 0 });
-
-        this._disable();
+        return bonusText;
     }
 
 	/**
-	 * Create the bonus screen wheel
+	 * Create the bonus screen wheel container and sections
 	 *
 	 * @private
+	 * @returns {PIXI.Container}
 	 */
-    _createWheel() {
-		this._wheelContainer = new PIXI.Container();
-		this._wheelContainer.name = 'wheelContainer';
-		this._bonusScreen!.addChild(this._wheelContainer);
+    _createWheelContainer() {
+		const wheelContainer = new PIXI.Container();
+		wheelContainer.name = 'wheelContainer';
+		this.screenContainer.addChild(wheelContainer);
 
         const style = new PIXI.TextStyle({
 			fontFamily: 'Arial',
@@ -156,7 +151,7 @@ class BonusScreen {
             wheelSection.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 1);
             wheelSection.angle = angle;
             wheelSection.tint = tint;
-            this._wheelContainer!.addChild(wheelSection);
+            wheelContainer.addChild(wheelSection);
 
             const wheelSectionText = new PIXI.Text(`${credits}`, style);
             wheelSectionText.name = `wheelSectionText${i}`;
@@ -165,17 +160,36 @@ class BonusScreen {
             wheelSection.addChild(wheelSectionText);
         });
 
-		this._wheelCenter = PIXI.Sprite.from(PIXI.Assets.get('wheelCenter'));
-		this._wheelCenter.name = 'wheelCenter';
-		this._wheelCenter.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 0.5);
-		this._wheelCenter.on('pointerdown', () => this._onClick());
-		this._bonusScreen!.addChild(this._wheelCenter);
+        return wheelContainer;
+    }
 
-		this._wheelPin = PIXI.Sprite.from(PIXI.Assets.get('pointer'));
-		this._wheelPin.name = 'wheelPin';
-		this._wheelPin.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 0.5);
-        this._wheelPin.position = { x: 0, y: -460 };
-		this._bonusScreen!.addChild(this._wheelPin);
+	/**
+	 * Create the bonus screen wheel center, clicked to start a spin
+	 *
+	 * @private
+	 * @returns {PIXI.Sprite}
+	 */
+    _createWheelCenter() {
+		const wheelCenter = PIXI.Sprite.from(PIXI.Assets.get('wheelCenter'));
+		wheelCenter.name = 'wheelCenter';
+		wheelCenter.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 0.5);
+		wheelCenter.on('pointerdown', () => this._onClick());
+		this.screenContainer.addChild(wheelCenter);
+
+        return wheelCenter;
+    }
+
+	/**
+	 * Create the bonus screen wheel pin, indicates where the win is
+	 *
+	 * @private
+	 */
+    _createWheelPin() {
+		const wheelPin = PIXI.Sprite.from(PIXI.Assets.get('pointer'));
+		wheelPin.name = 'wheelPin';
+		wheelPin.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 0.5);
+        wheelPin.position = { x: 0, y: -460 };
+		this.screenContainer.addChild(wheelPin);
     }
 
     /**
@@ -184,7 +198,7 @@ class BonusScreen {
      * @private
      */
     _enable() {
-		this._wheelCenter!.interactive = true;
+		this._wheelCenter.interactive = true;
     }
 
     /**
@@ -193,7 +207,7 @@ class BonusScreen {
      * @private
      */
     _disable() {
-		this._wheelCenter!.interactive = false;
+		this._wheelCenter.interactive = false;
     }
 
     /**
@@ -205,7 +219,7 @@ class BonusScreen {
     async _onClick() {
         console.log(`Bonus Wheel Clicked`);
 
-        this._bonusText!.visible = false;
+        this._bonusText.visible = false;
         this._disable();
         await this._spin();
         this._end();
@@ -230,7 +244,7 @@ class BonusScreen {
         await wheelSlowTween.start();
         soundPlayer.play("land");
 
-        this._wheelContainer!.angle = angle;
+        this._wheelContainer.angle = angle;
         await this._onWin(credits);
     }
 
@@ -307,8 +321,8 @@ class BonusScreen {
     async _end() {
         console.log(`Bonus Screen Ended`);
 
-        await this._fadeOutTween!.start();
-        this._bonusScreen!.visible = false;
+        await this._fadeOutTween.start();
+        this.screenContainer.visible = false;
 
         if (this._resolver) {
             this._resolver();

@@ -1,30 +1,25 @@
 import * as PIXI from "pixi.js";
 import Tween from "../lib/tween";
-
-interface TitleScreenInitData {
-    layer: PIXI.Container
-}
+import Screen, { ScreenInitData } from "./screen";
 
 /**
  * Title Screen
  *
  * @class TitleScreen
+ * @extends Screen
  */
-class TitleScreen {
+class TitleScreen extends Screen {
 
-    private readonly _layer: PIXI.Container;
     private _resolver?: Function;
-    private _titleScreen?: PIXI.Container;
-    private _titleButton?: PIXI.Sprite;
-    private _fadeInTween?: Tween;
-    private _fadeOutTween?: Tween;
+    private _titleButton: PIXI.Sprite;
 
-	constructor(initData: TitleScreenInitData) {
-        const { layer } = initData;
+	constructor(initData: ScreenInitData) {
+        super(initData);
 
-        this._layer = layer;
+        this._resolver = undefined;
+        this._titleButton = this._createButton();
 
-        this._create();
+        this._disable();
     }
 
     /**
@@ -38,24 +33,20 @@ class TitleScreen {
 
             console.log(`Title Screen Started`);
             
-            this._titleScreen!.alpha = 0;
-            this._titleScreen!.visible = true;
-            await this._fadeInTween!.start();
+            this.screenContainer.alpha = 0;
+            this.screenContainer.visible = true;
+            await this._fadeInTween.start();
             this._enable();
         });
     }
 
 	/**
-	 * Create the title screen
+	 * Create the title screen button
 	 *
 	 * @private
+	 * @returns {PIXI.Sprite}
 	 */
-    _create() {
-		this._titleScreen = new PIXI.Container();
-		this._titleScreen.name = 'titleScreen';
-        this._titleScreen.visible = false;
-		this._layer.addChild(this._titleScreen);
-
+    _createButton() {
         const style = new PIXI.TextStyle({
 			fontFamily: 'Arial',
 			fontSize: 36,
@@ -66,18 +57,15 @@ class TitleScreen {
         const titleText = new PIXI.Text(`TypeScript Project`, style);
 		titleText.name = 'titleText';
 		titleText.position = { x: -155, y: -180 };
-		this._titleScreen.addChild(titleText);
+		this.screenContainer.addChild(titleText);
 
-		this._titleButton = PIXI.Sprite.from(PIXI.Assets.get('play'));
-		this._titleButton.name = 'titleButton';
-		this._titleButton.position = { x: -122, y: -123 };
-		this._titleButton.on('pointerdown', () => this._onClick());
-		this._titleScreen.addChild(this._titleButton);
+		const titleButton = PIXI.Sprite.from(PIXI.Assets.get('play'));
+		titleButton.name = 'titleButton';
+		titleButton.position = { x: -122, y: -123 };
+		titleButton.on('pointerdown', () => this._onClick());
+		this.screenContainer.addChild(titleButton);
 
-        this._fadeInTween = new Tween(this._titleScreen, { alpha: 0 }, { alpha: 1 });
-        this._fadeOutTween = new Tween(this._titleScreen, { alpha: 1 }, { alpha: 0 });
-
-        this._disable();
+        return titleButton;
     }
 
     /**
@@ -86,8 +74,8 @@ class TitleScreen {
      * @private
      */
     _enable() {
-		this._titleButton!.interactive = true;
-		this._titleButton!.alpha = 1;
+		this._titleButton.interactive = true;
+		this._titleButton.alpha = 1;
     }
 
     /**
@@ -96,8 +84,8 @@ class TitleScreen {
      * @private
      */
     _disable() {
-		this._titleButton!.interactive = false;
-		this._titleButton!.alpha = 0.5;
+		this._titleButton.interactive = false;
+		this._titleButton.alpha = 0.5;
     }
 
     /**
@@ -110,8 +98,8 @@ class TitleScreen {
         console.log(`Title Screen Ended`);
 
         this._disable();
-        await this._fadeOutTween!.start();
-        this._titleScreen!.visible = false;
+        await this._fadeOutTween.start();
+        this.screenContainer.visible = false;
 
         if (this._resolver) {
             this._resolver();

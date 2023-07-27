@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
+import Screen, { ScreenInitData } from "./screen";
 
-interface DebugScreenInitData {
-    layer: PIXI.Container,
+interface DebugScreenInitData extends ScreenInitData {
     onDebug: Function
 }
 
@@ -17,19 +17,19 @@ interface DebugData {
  * Debug Screen
  *
  * @class DebugScreen
+ * @extends Screen
  */
-class DebugScreen {
+class DebugScreen extends Screen {
 
-    private readonly _layer: PIXI.Container;
     private readonly _onDebug: Function;
     private readonly _debugData: DebugData[];
     private _buttons: PIXI.Graphics[];
-    private _debugScreen?: PIXI.Container;
 
 	constructor(initData: DebugScreenInitData) {
-        const { layer, onDebug } = initData;
+        super(initData);
 
-        this._layer = layer;
+        const { onDebug } = initData;
+
         this._onDebug = onDebug;
         this._debugData = [
             { tint: "#bbffff", value: "5000", weights: [0], x: -900, y: -490 },
@@ -51,11 +51,6 @@ class DebugScreen {
 	 * @private
 	 */
     _create() {
-		this._debugScreen = new PIXI.Container();
-		this._debugScreen.name = 'debugScreen';
-        this._debugScreen.visible = false;
-		this._layer.addChild(this._debugScreen);
-
         const style = new PIXI.TextStyle({
 			fontFamily: 'Arial',
 			fontSize: 25,
@@ -72,7 +67,7 @@ class DebugScreen {
             gfx.interactive = true;
             gfx.tint = tint;
             gfx.on('pointerdown', () => this._onClick(gfx, weights));
-            this._debugScreen!.addChild(gfx);
+            this.screenContainer.addChild(gfx);
 
             this._buttons.push(gfx);
 
@@ -94,7 +89,7 @@ class DebugScreen {
         window.addEventListener("keydown", (ev) => {
             switch (ev.code) {
                 case "KeyD":
-                    this._debugScreen!.visible = !this._debugScreen!.visible;
+                    this.screenContainer.visible = !this.screenContainer.visible;
                     break;
                 default:
                     break;

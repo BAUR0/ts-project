@@ -15,15 +15,14 @@ class UserInterface {
 
     private _layer: PIXI.Container;
     private _balance: number;
-    private _balanceText?: PIXI.Text;
+    private _balanceText: PIXI.Text;
 
 	constructor(initData: UserInterfaceInitData) {
         const { layer } = initData;
 
         this._layer = layer;
         this._balance = 1000;
-
-        this._create();
+        this._balanceText = this._createBalanceText();
     }
 
     /**
@@ -37,7 +36,7 @@ class UserInterface {
     }
 	set balance(balance: number) {
         this._balance = Math.floor(balance);
-		this._balanceText!.text = `Credits: ${this._balance}`;
+		this._balanceText.text = `Credits: ${this._balance}`;
 	}
 
 	/**
@@ -58,11 +57,12 @@ class UserInterface {
     }
 
 	/**
-	 * Create the User Interface
+	 * Create the balance text
 	 *
 	 * @private
+	 * @returns {PIXI.Text}
 	 */
-    _create() {
+    _createBalanceText() {
         const style = new PIXI.TextStyle({
 			fontFamily: 'Arial',
 			fontSize: 36,
@@ -70,10 +70,12 @@ class UserInterface {
 			fill: '#ffffff'
 		});
 
-        this._balanceText = new PIXI.Text(`Credits: ${this._balance}`, style);
-		this._balanceText.name = 'balanceText';
-		this._balanceText.position = { x: 500, y: 400 };
-		this._layer.addChild(this._balanceText);
+        const balanceText = new PIXI.Text(`Credits: ${this._balance}`, style);
+		balanceText.name = 'balanceText';
+		balanceText.position = { x: 500, y: 400 };
+		this._layer.addChild(balanceText);
+
+        return balanceText;
     }
 }
 

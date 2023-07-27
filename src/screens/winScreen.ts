@@ -1,38 +1,32 @@
 import * as PIXI from "pixi.js";
 import { Emitter } from "@pixi/particle-emitter";
 import Tween from "../lib/tween";
-
-interface WinScreenInitData {
-    layer: PIXI.Container
-}
+import Screen, { ScreenInitData } from "./screen";
 
 /**
  * Win Screen
  *
  * @class WinScreen
+ * @extends Screen
  */
-class WinScreen {
+class WinScreen extends Screen {
 
-    private readonly _layer: PIXI.Container;
     private _time: number;
-    private _winScreen?: PIXI.Container;
-    private _winGlowContainer?: PIXI.Container;
-    private _winGlowMask?: PIXI.Sprite;
-    private _winGlow?: PIXI.Sprite;
-    private _winEmitterContainer?: PIXI.Container;
-    private _winEmitter?: Emitter;
-    private _winText?: PIXI.Text;
-    private _fadeInTween?: Tween;
-    private _fadeOutTween?: Tween;
-    private _rotateTween?: Tween;
+    private _winText: PIXI.Text;
+    private _winEmitter: Emitter;
 
-	constructor(initData: WinScreenInitData) {
-        const { layer } = initData;
+	constructor(initData: ScreenInitData) {
+        super(initData);
 
-        this._layer = layer;
+        const winGlow = this._createGlow();
+        this._winText = this._createText();
+        this._winEmitter = this._createEmitter();
+
+        // add a delay to the fadeOutTween
+        this._fadeOutTween = new Tween(this.screenContainer, { alpha: 1 }, { alpha: 0, delay: 2 });
+        new Tween(winGlow, { angle: 0 }, { angle: 360, repeat: -1, ease: "linear", duration: 5 }).start();
+
         this._time = Date.now();
-
-        this._create();
         this._update();
     }
 
@@ -45,52 +39,52 @@ class WinScreen {
     async start(win: number) {
         console.log(`Win Screen Started`);
         
-        this._winScreen!.visible = true;
-        this._winText!.text = `YOU WON ${win} CREDITS!`;
+        this.screenContainer.visible = true;
+        this._winText.text = `YOU WON ${win} CREDITS!`;
 
-        this._winEmitter!.emit = true;
-        await this._fadeInTween!.start();
-        this._winEmitter!.emit = false;
-        await this._fadeOutTween!.start();
-        this._winScreen!.visible = false;
+        this._winEmitter.emit = true;
+        await this._fadeInTween.start();
+        this._winEmitter.emit = false;
+        await this._fadeOutTween.start();
+        this.screenContainer.visible = false;
 
         console.log(`Win Screen Ended`);
     }
 
 	/**
-	 * Create the win screen
+	 * Create the win screen glow
 	 *
 	 * @private
+	 * @returns {PIXI.Sprite}
 	 */
-    _create() {
-		this._winScreen = new PIXI.Container();
-		this._winScreen.name = 'winScreen';
-        this._winScreen.visible = false;
-        this._winScreen.alpha = 0;
-		this._layer.addChild(this._winScreen);
+    _createGlow() {
+		const winGlowContainer = new PIXI.Container();
+		winGlowContainer.name = 'winGlowContainer';
+		winGlowContainer.scale = { x: 5, y: 2 };
+		this.screenContainer.addChild(winGlowContainer);
 
-		this._winGlowContainer = new PIXI.Container();
-		this._winGlowContainer.name = 'winGlowContainer';
-		this._winGlowContainer.scale = { x: 5, y: 2 };
-		this._winScreen.addChild(this._winGlowContainer);
+        const winGlowMask = PIXI.Sprite.from(PIXI.Assets.get('sunBurst'));
+		winGlowMask.name = 'winGlowMask';
+		winGlowMask.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 0.5);
+		winGlowContainer.addChild(winGlowMask);
 
-        this._winGlowMask = PIXI.Sprite.from(PIXI.Assets.get('sunBurst'));
-		this._winGlowMask.name = 'winGlowMask';
-		this._winGlowMask.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 0.5);
-		this._winGlowContainer.addChild(this._winGlowMask);
+		const winGlow = PIXI.Sprite.from(PIXI.Assets.get('sunBurst'));
+		winGlow.name = 'winGlow';
+		winGlow.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 0.5);
+        winGlow.tint = "#ff00ff";
+        winGlow.mask = winGlowMask;
+		winGlowContainer.addChild(winGlow);
 
-		this._winGlow = PIXI.Sprite.from(PIXI.Assets.get('sunBurst'));
-		this._winGlow.name = 'winGlow';
-		this._winGlow.anchor = new PIXI.ObservablePoint(() => {}, this, 0.5, 0.5);
-        this._winGlow.tint = "#ff00ff";
-        this._winGlow.mask = this._winGlowMask;
-		this._winGlowContainer.addChild(this._winGlow);
-        
-        this._rotateTween = new Tween(this._winGlow, { angle: 0 }, { angle: 360, repeat: -1, ease: "linear", duration: 5 });
-        this._rotateTween.start();
+        return winGlow
+    }
 
-        this._createEmitter();
-
+	/**
+	 * Create the win screen text
+	 *
+	 * @private
+	 * @returns {PIXI.Text}
+	 */
+    _createText() {
         const style = new PIXI.TextStyle({
 			fontFamily: 'Arial',
 			fontSize: 50,
@@ -101,26 +95,26 @@ class WinScreen {
             strokeThickness: 5
 		});
 
-        this._winText = new PIXI.Text(``, style);
-		this._winText.name = 'winText';
-		this._winText.position = { x: -300, y: -25 };
-		this._winScreen.addChild(this._winText);
+        const winText = new PIXI.Text(``, style);
+		winText.name = 'winText';
+		winText.position = { x: -300, y: -25 };
+		this.screenContainer.addChild(winText);
 
-        this._fadeInTween = new Tween(this._winScreen, { alpha: 0 }, { alpha: 1 });
-        this._fadeOutTween = new Tween(this._winScreen, { alpha: 1 }, { alpha: 0, delay: 2 });
+        return winText;
     }
 
 	/**
 	 * Create the particle emitter
 	 *
 	 * @private
+	 * @returns {Emitter}
 	 */
     _createEmitter() {
-		this._winEmitterContainer = new PIXI.Container();
-		this._winEmitterContainer.name = 'winEmitterContainer';
-		this._winScreen!.addChild(this._winEmitterContainer);
+		const winEmitterContainer = new PIXI.Container();
+		winEmitterContainer.name = 'winEmitterContainer';
+		this.screenContainer.addChild(winEmitterContainer);
 
-        this._winEmitter = new Emitter(this._winEmitterContainer, {
+        return new Emitter(winEmitterContainer, {
             addAtBack: true,
             behaviors: [
                 {
@@ -210,7 +204,7 @@ class WinScreen {
         window.requestAnimationFrame(() => this._update());
 
         const  now = Date.now();
-        this._winEmitter!.update((now - this._time) * 0.001);
+        this._winEmitter.update((now - this._time) * 0.001);
         this._time = now;
     }
 }
